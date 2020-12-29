@@ -413,11 +413,11 @@ def coord_system(field, handle_metadata_errors):
         )
         if any([is_missing(field, v) for v in crs_args]):
             warnings.warn(
-                f"Coordinate Reference System is not completely defined. "
-                f"Plotting and reprojection may be impaired."
+                "Coordinate Reference System is not completely defined. "
+                "Plotting and reprojection may be impaired."
             )
         coord_sys = iris.coord_systems.TransverseMercator(
-            *crs_args, iris.coord_systems.GeogCS(**ellipsoid),
+            *crs_args, iris.coord_systems.GeogCS(**ellipsoid)
         )
     elif field.horizontal_grid_type == 1:
         coord_sys = iris.coord_systems.GeogCS(**ellipsoid)
@@ -456,7 +456,7 @@ def horizontal_grid(cube, field, handle_metadata_errors):
         dtype=np.float32,
     )
     x_coord = DimCoord(
-        points, standard_name=x_coord_name, units=units_name, coord_system=crs,
+        points, standard_name=x_coord_name, units=units_name, coord_system=crs
     )
     cube.add_dim_coord(x_coord, 1)
     points = np.linspace(
@@ -467,7 +467,7 @@ def horizontal_grid(cube, field, handle_metadata_errors):
         dtype=np.float32,
     )
     y_coord = DimCoord(
-        points, standard_name=y_coord_name, units=units_name, coord_system=crs,
+        points, standard_name=y_coord_name, units=units_name, coord_system=crs
     )
     cube.add_dim_coord(y_coord, 0)
 

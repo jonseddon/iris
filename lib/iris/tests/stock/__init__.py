@@ -721,12 +721,6 @@ def realistic_4d_w_missing_data():
     return cube
 
 
-def global_grib2():
-    path = tests.get_data_path(("GRIB", "global_t", "global.grib2"))
-    cube = iris.load_cube(path)
-    return cube
-
-
 def ocean_sigma_z():
     """
     Return a sample cube with an
@@ -834,8 +828,8 @@ def climatology_3d():
         units="days since 1970-01-01 00:00:00-00",
         climatological=True,
     )
-    lon_dim = DimCoord(lon, standard_name="longitude")
-    lat_dim = DimCoord(lat, standard_name="latitude")
+    lon_dim = DimCoord(lon, standard_name="longitude", units="degrees")
+    lat_dim = DimCoord(lat, standard_name="latitude", units="degrees")
 
     data_shape = (len(time_points), len(lat), len(lon))
     values = np.zeros(shape=data_shape, dtype=np.int8)

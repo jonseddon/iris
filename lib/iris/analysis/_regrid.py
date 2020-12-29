@@ -11,6 +11,7 @@ import warnings
 import numpy as np
 import numpy.ma as ma
 
+from iris._lazy_data import map_complete_blocks
 from iris.analysis._interpolation import (
     EXTRAPOLATION_MODES,
     extend_circular_coord_and_data,
@@ -426,8 +427,7 @@ class CurvilinearRegridder:
         if len(coords) != 1:
             raise ValueError(
                 "Cube {!r} must contain a single 1D {} "
-                "coordinate.".format(cube.name()),
-                axis,
+                "coordinate.".format(cube.name(), axis)
             )
         return coords[0]
 
@@ -438,6 +438,9 @@ class CurvilinearRegridder:
 
         The given cube must be defined with the same grid as the source
         grid used to create this :class:`_CurvilinearRegridder`.
+
+        If the source cube has lazy data, it will be realized before
+        regridding and the returned cube will also have realized data.
 
         Args:
 
@@ -477,11 +480,15 @@ class CurvilinearRegridder:
         for slice_cube in src.slices(sx):
             if self._regrid_info is None:
                 # Calculate the basic regrid info just once.
-                self._regrid_info = _regrid_weighted_curvilinear_to_rectilinear__prepare(
-                    slice_cube, self.weights, self._target_cube
+                self._regrid_info = (
+                    _regrid_weighted_curvilinear_to_rectilinear__prepare(
+                        slice_cube, self.weights, self._target_cube
+                    )
                 )
-            slice_result = _regrid_weighted_curvilinear_to_rectilinear__perform(
-                slice_cube, self._regrid_info
+            slice_result = (
+                _regrid_weighted_curvilinear_to_rectilinear__perform(
+                    slice_cube, self._regrid_info
+                )
             )
             result_slices.append(slice_result)
         result = result_slices.merge_cube()
@@ -985,6 +992,9 @@ class RectilinearRegridder:
         The given cube must be defined with the same grid as the source
         grid used to create this :class:`RectilinearRegridder`.
 
+        If the source cube has lazy data, the returned cube will also
+        have lazy data.
+
         Args:
 
         * src:
@@ -995,6 +1005,12 @@ class RectilinearRegridder:
             and the other dimensions from this cube. The data values of
             this cube will be converted to values on the new grid using
             either nearest-neighbour or linear interpolation.
+
+        .. note::
+
+            If the source cube has lazy data,
+            `chunks <https://docs.dask.org/en/latest/array-chunks.html>`__
+            in the horizontal dimensions will be combined before regridding.
 
         """
         # Validity checks.
@@ -1041,16 +1057,22 @@ class RectilinearRegridder:
         # Compute the interpolated data values.
         x_dim = src.coord_dims(src_x_coord)[0]
         y_dim = src.coord_dims(src_y_coord)[0]
-        data = self._regrid(
-            src.data,
-            x_dim,
-            y_dim,
-            src_x_coord,
-            src_y_coord,
-            sample_grid_x,
-            sample_grid_y,
-            self._method,
-            self._extrapolation_mode,
+
+        # Define regrid function
+        regrid = functools.partial(
+            self._regrid,
+            x_dim=x_dim,
+            y_dim=y_dim,
+            src_x_coord=src_x_coord,
+            src_y_coord=src_y_coord,
+            sample_grid_x=sample_grid_x,
+            sample_grid_y=sample_grid_y,
+            method=self._method,
+            extrapolation_mode=self._extrapolation_mode,
+        )
+
+        data = map_complete_blocks(
+            src, regrid, (y_dim, x_dim), sample_grid_x.shape
         )
 
         # Wrap up the data as a Cube.

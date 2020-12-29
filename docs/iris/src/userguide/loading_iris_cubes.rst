@@ -38,10 +38,12 @@ This shows that there were 2 cubes as a result of loading the file, they were:
 ``air_potential_temperature`` and ``surface_altitude``.
 
 The ``surface_altitude`` cube was 2 dimensional with:
+
    * the two dimensions have extents of 204 and 187 respectively and are 
      represented by the ``grid_latitude`` and ``grid_longitude`` coordinates.
 
 The ``air_potential_temperature`` cubes were 4 dimensional with:
+
    * the same length ``grid_latitude`` and ``grid_longitude`` dimensions as 
      ``surface_altitide``
    * a ``time`` dimension of length 3
@@ -267,7 +269,7 @@ boundary of a circular coordinate (this is often the meridian or the dateline /
 antimeridian). An example use-case of this is to extract the entire Pacific Ocean
 from a cube whose longitudes are bounded by the dateline.
 
-This functionality cannot be provided reliably using contraints. Instead you should use the
+This functionality cannot be provided reliably using constraints. Instead you should use the
 functionality provided by :meth:`cube.intersection <iris.cube.Cube.intersection>`
 to extract this region.
 

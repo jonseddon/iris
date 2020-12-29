@@ -29,8 +29,9 @@ class TestGetAttrUnits(tests.IrisTest):
 
         cf_group = mock.Mock(global_attributes=global_attributes)
 
-        cf_var = mock.Mock(
+        cf_var = mock.MagicMock(
             cf_name='sound_frequency',
+            cf_data=mock.Mock(spec=[]),
             standard_name=None,
             long_name=None,
             units=u'\u266b',
@@ -44,7 +45,7 @@ class TestGetAttrUnits(tests.IrisTest):
         expected_attributes = {'invalid_units': u'\u266b'}
         cf_var = self._make_cf_var()
         attr_units = get_attr_units(cf_var, attributes)
-        self.assertEqual(attr_units, 'unknown')
+        self.assertEqual(attr_units, '?')
         self.assertEqual(attributes, expected_attributes)
 
 

@@ -4,21 +4,51 @@
 Contributing a "What's New" entry
 =================================
 
-Iris has an aggregator for building a draft what's new document for each
-release. The draft what's new document is built from contributions by code authors.
-This means contributions to the what's new document are written by the
-developer most familiar with the change made.
+Iris uses a file named ``latest.rst`` to keep a draft of upcoming changes
+that will form the next release.  Contributions to the :ref:`iris_whatsnew`
+document are written by the developer most familiar with the change made.
+The contribution should be included as part of the Iris Pull Request that
+introduces the change.
 
-A contribution provides an entry in the what's new document, which describes a
-change that improved Iris in some way. This change may be a new feature in Iris
-or the fix for a bug introduced in a previous release. The contribution should
-be included as part of the Iris Pull Request that introduces the change.
+The ``latest.rst`` and the past release notes are kept in
+``docs/iris/src/whatsnew/``. If you are writing the first contribution after
+an Iris release: **create the new** ``latest.rst`` by copying the content from
+``latest.rst.template`` in the same directory.
 
-When a new release is prepared, the what's new contributions are combined into
-a draft what's new document for the release.
+Since the `Contribution categories`_ include Internal changes, **all** Iris
+Pull Requests should be accompanied by a "What's New" contribution.
 
 
-Writing a Contribution
+Git Conflicts
+=============
+
+If changes to ``latest.rst`` are being suggested in several simultaneous
+Iris Pull Requests, Git will likely encounter merge conflicts. If this
+situation is thought likely (large PR, high repo activity etc.):
+
+* PR author: Do not include a "What's New" entry. Mention in the PR text that a
+  "What's New" entry is pending
+
+* PR reviewer: Review the PR as normal. Once the PR is acceptable, ask that
+  a **new pull request** be created specifically for the "What's New" entry,
+  which references the main pull request and titled (e.g. for PR#9999):
+
+    What's New for #9999
+
+* PR author: create the "What's New" pull request
+
+* PR reviewer: once the "What's New" PR is created, **merge the main PR**.
+  (this will fix any `travis-ci`_ linkcheck errors where the links in the
+  "What's New" PR reference new features introduced in the main PR)
+
+* PR reviewer: review the "What's New" PR, merge once acceptable
+
+These measures should mean the suggested ``latest.rst`` changes are outstanding
+for the minimum time, minimising conflicts and minimising the need to rebase or
+merge from trunk.
+
+
+Writing a contribution
 ======================
 
 As introduced above, a contribution is the description of a change to Iris
@@ -26,98 +56,80 @@ which improved Iris in some way. As such, a single Iris Pull Request may
 contain multiple changes that are worth highlighting as contributions to the
 what's new document.
 
-Each contribution will ideally be written as a single concise bullet point.
-The content of the bullet point should highlight the change that has been made
-to Iris, targeting an Iris user as the audience.
+The appropriate contribution for a pull request might in fact be an addition or
+change to an existing "What's New" entry.
 
-A contribution is a feature summary by the code author, which avoids the
-release developer having to personally review the change in detail :
-It is not in itself the final documentation content,
-so it does not have to be perfect or complete in every respect.
+Each contribution will ideally be written as a single concise bullet point
+in a reStructuredText format. Where possible do not exceed **column 80** and
+ensure that any subsequent lines of the same bullet point are aligned with the
+first. The content should target an Iris user as the audience. The required
+content, in order, is as follows:
+
+* Names of those who contributed the change. These should be their GitHub
+  user name. Link the name to their GitHub profile. E.g.
+  ```@bjlittle <https://github.com/bjlittle>`_ and
+  `@tkknight <https://github.com/tkknight>`_ changed...``
+
+* The new/changed behaviour
+
+* Context to the change. Possible examples include: what this fixes, why
+  something was added, issue references (e.g. ``:issue:`9999```), more specific
+  detail on the change itself.
+
+* Pull request references, bracketed, following the final period. E.g.
+  ``(:pull:`1111`, :pull:`9999`)``
+
+* A trailing blank line (standard reStructuredText bullet format)
+
+For example::
+
+  * `@bjlittle <https://github.com/bjlittle>`_ and
+    `@tkknight <https://github.com/tkknight>`_ changed changed argument ``x``
+    to be optional in :class:`~iris.module.class` and
+    :meth:`iris.module.method`. This allows greater flexibility as requested in
+    :issue:`9999`. (:pull:`1111`, :pull:`9999`)
 
 
-Adding Contribution Files
-=========================
+The above example also demonstrates some of the possible syntax for including
+links to code. For more inspiration on possible content and references, please
+examine past what's :ref:`iris_whatsnew` entries.
 
-Each release must have a directory called ``contributions_<release number>``,
-which should be created following the release of the current version of Iris. Each
-release directory must be placed in ``docs/iris/src/whatsnew/``.
-Contributions to the what's new must be written in markdown and placed into this
-directory in text files. The filename for each item should be structured as follows:
+.. note:: The reStructuredText syntax will be checked as part of building
+          the documentation.  Any warnings should be corrected.
+          `travis-ci`_ will automatically build the documentation when
+          creating a pull request, however you can also manually
+          :ref:`build <contributing.documentation.building>` the documentation.
 
-``<category>_<date>_<summary>.txt``
+.. _travis-ci: https://travis-ci.org/github/SciTools/iris
 
-Category
---------
-The category must be one of the following:
 
-*newfeature*
+Contribution categories
+=======================
+
+The structure of the what's new release note should be easy to read by
+users.  To achieve this several categories may be used.
+
+**📢 Announcements**
+  General news and announcements to the Iris community.
+
+**✨ Features**
   Features that are new or changed to add functionality.
-*bugfix*
-  A bugfix.
-*incompatiblechange*
+
+**🐛 Bug Fixes**
+  A bug fix.
+
+**💣 Incompatible Changes**
   A change that causes an incompatibility with prior versions of Iris.
-*deprecate*
+
+**🔥 Deprecations**
   Deprecations of functionality.
-*docchange*
+
+**🔗 Dependencies**
+  Additions, removals and version changes in Iris' package dependencies.
+
+**📚 Documentation**
   Changes to documentation.
 
-Date
-----
-
-The date must be a hyphen-separated date in the format of:
-
- * a four digit year,
- * a three character month name, and
- * a two digit day.
-
-For example:
-
- * 2012-Jan-30
- * 2014-May-03
- * 2015-Feb-19
-
-Summary
--------
-
-The summary can be any remaining filename characters, and simply provides a
-short identifying description of the change.
-
-For example:
-
- * whats-new-aggregator
- * using_mo_pack
- * correction-to-bilinear-regrid
- * GRIB2_pdt11
-
-
-Complete Examples
------------------
-
-Some sample what's new contribution filenames:
-
- * bugfix_2015-Aug-18_partial_pp_constraints.txt
- * deprecate_2015-Nov-01_unit-module.txt
- * incompatiblechange_2015-Oct-12_GRIB_optional_Python3_unavailable.txt
- * newfeature_2015-Jul-03_pearsonr_rewrite.txt
-
-.. note::
-    A test in the standard test suite ensures that all the contents of the
-    latest contributions directory conform to this naming scheme.
-
-
-Compiling a Draft
-=================
-
-Compiling a draft from the supplied contributions should be done when preparing
-a release. Running ``docs/iris/src/whatsnew/aggregate_directory.py`` with the
-release number as the argument will create a draft what's new with the name
-``<release>.rst`` file for the specified release, by aggregating the individual
-contributions from the relevant folder.
-Omitting the release number will build the latest version for which a
-contributions folder is present.
-This command fails if a file with the relevant name already exists.
-
-The resulting draft document is only a starting point, which the release
-developer will then edit to produce the final 'What's new in Iris x.x'
-documentation.
+**💼 Internal**
+  Changes to any internal or development related topics, such as testing,
+  environment dependencies etc.

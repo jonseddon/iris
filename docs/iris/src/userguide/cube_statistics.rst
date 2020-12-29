@@ -93,7 +93,8 @@ can be used instead of ``MEAN``, see :mod:`iris.analysis` for a full list
 of currently supported operators.
 
 For an example of using this functionality, the
-:ref:`Hovmoller diagram <Meteorology-hovmoller>` example found
+:ref:`sphx_glr_generated_gallery_meteorology_plot_hovmoller.py`
+example found
 in the gallery takes a zonal mean of an ``XYT`` cube by using the
 ``collapsed`` method with ``latitude`` and ``iris.analysis.MEAN`` as arguments.
 
@@ -147,7 +148,7 @@ These areas can now be passed to the ``collapsed`` method as weights:
 
 Several examples of area averaging exist in the gallery which may be of interest,
 including an example on taking a :ref:`global area-weighted mean
-<Meteorology-COP_1d_plot>`.
+<sphx_glr_generated_gallery_meteorology_plot_COP_1d.py>`.
 
 .. _cube-statistics-aggregated-by:
 
@@ -244,7 +245,7 @@ These two coordinates can now be used to aggregate by season and climate-year:
     
 The primary change in the cube is that the cube's data has been 
 reduced in the 'time' dimension by aggregation (taking means, in this case). 
-This has collected together all datapoints with the same values of season and 
+This has collected together all data points with the same values of season and 
 season-year.
 The results are now indexed by the 19 different possible values of season and
 season-year in a new, reduced 'time' dimension.

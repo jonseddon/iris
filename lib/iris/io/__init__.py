@@ -287,8 +287,8 @@ def add_saver(file_extension, new_saver):
 
     Args:
 
-        * file_extension - A string such as "pp" or "my_format".
-        * new_saver      - A function of the form ``my_saver(cube, target)``.
+    * file_extension: A string such as "pp" or "my_format".
+    * new_saver:      A function of the form ``my_saver(cube, target)``.
 
     See also :func:`iris.io.save`
 
@@ -334,7 +334,7 @@ def find_saver(filespec):
 
 def save(source, target, saver=None, **kwargs):
     """
-    Save one or more Cubes to file (or other writable).
+    Save one or more Cubes to file (or other writeable).
 
     Iris currently supports three file formats for saving, which it can
     recognise by filename extension:
@@ -351,24 +351,27 @@ def save(source, target, saver=None, **kwargs):
 
     Args:
 
-        * source    - A :class:`iris.cube.Cube`, :class:`iris.cube.CubeList` or
-                      sequence of cubes.
-        * target    - A filename (or writable, depending on file format).
-                      When given a filename or file, Iris can determine the
-                      file format.
+    * source:
+        :class:`iris.cube.Cube`, :class:`iris.cube.CubeList` or
+        sequence of cubes.
+    * target:
+        A filename (or writeable, depending on file format).
+        When given a filename or file, Iris can determine the
+        file format.
 
     Kwargs:
 
-        * saver     - Optional. Specifies the file format to save.
-                      If omitted, Iris will attempt to determine the format.
+    * saver:
+        Optional. Specifies the file format to save.
+        If omitted, Iris will attempt to determine the format.
 
-                      If a string, this is the recognised filename extension
-                      (where the actual filename may not have it).
-                      Otherwise the value is a saver function, of the form:
-                      ``my_saver(cube, target)`` plus any custom keywords. It
-                      is assumed that a saver will accept an ``append`` keyword
-                      if it's file format can handle multiple cubes. See also
-                      :func:`iris.io.add_saver`.
+        If a string, this is the recognised filename extension
+        (where the actual filename may not have it).
+        Otherwise the value is a saver function, of the form:
+        ``my_saver(cube, target)`` plus any custom keywords. It
+        is assumed that a saver will accept an ``append`` keyword
+        if it's file format can handle multiple cubes. See also
+        :func:`iris.io.add_saver`.
 
     All other keywords are passed through to the saver function; see the
     relevant saver documentation for more information on keyword arguments.

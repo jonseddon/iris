@@ -102,15 +102,15 @@ class TestLicenseHeaders(tests.IrisTest):
     def test_license_headers(self):
         exclude_patterns = (
             "setup.py",
+            "noxfile.py",
             "build/*",
             "dist/*",
-            "docs/iris/example_code/*/*.py",
+            "docs/iris/gallery_code/*/*.py",
             "docs/iris/src/developers_guide/documenting/*.py",
-            "docs/iris/src/sphinxext/gen_gallery.py",
             "docs/iris/src/userguide/plotting_examples/*.py",
             "docs/iris/src/userguide/regridding_plots/*.py",
             "docs/iris/src/developers_guide/gitwash_dumper.py",
-            "docs/iris/build/*",
+            "docs/iris/src/_build/*",
             "lib/iris/analysis/_scipy_interpolate.py",
             "lib/iris/fileformats/_pyke_rules/*",
         )

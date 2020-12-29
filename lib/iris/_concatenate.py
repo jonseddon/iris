@@ -9,7 +9,6 @@ Automatic concatenation of multiple cubes over one or more existing dimensions.
 """
 
 from collections import defaultdict, namedtuple
-from copy import deepcopy
 
 import dask.array as da
 import numpy as np
@@ -69,7 +68,7 @@ class _CoordMetaData(
     Args:
 
     * defn:
-        The :class:`iris.coords.CoordDefn` metadata that represents a
+        The :class:`iris.common.CoordMetadata` metadata that represents a
         coordinate.
 
     * dims:
@@ -86,7 +85,7 @@ class _CoordMetaData(
 
     """
 
-    def __new__(cls, coord, dims):
+    def __new__(mcs, coord, dims):
         """
         Create a new :class:`_CoordMetaData` instance.
 
@@ -102,7 +101,7 @@ class _CoordMetaData(
             The new class instance.
 
         """
-        defn = coord._as_defn()
+        defn = coord.metadata
         points_dtype = coord.points.dtype
         bounds_dtype = coord.bounds.dtype if coord.bounds is not None else None
         kwargs = {}
@@ -121,7 +120,7 @@ class _CoordMetaData(
                 order = _DECREASING
             kwargs["order"] = order
         metadata = super().__new__(
-            cls, defn, dims, points_dtype, bounds_dtype, kwargs
+            mcs, defn, dims, points_dtype, bounds_dtype, kwargs
         )
         return metadata
 
@@ -162,7 +161,7 @@ class _CoordMetaData(
         return self.defn.name()
 
 
-class _OtherMetaData(namedtuple("OtherMetaData", ["defn", "dims"],)):
+class _OtherMetaData(namedtuple("OtherMetaData", ["defn", "dims"])):
     """
     Container for the metadata that defines a cell measure or ancillary
     variable.
@@ -195,7 +194,7 @@ class _OtherMetaData(namedtuple("OtherMetaData", ["defn", "dims"],)):
             The new class instance.
 
         """
-        defn = ancil._as_defn()
+        defn = ancil.metadata
         metadata = super().__new__(cls, defn, dims)
         return metadata
 
@@ -404,11 +403,11 @@ class _CubeSignature:
         axes = dict(T=0, Z=1, Y=2, X=3)
 
         # Coordinate sort function - by guessed coordinate axis, then
-        # by coordinate definition, then by dimensions, in ascending order.
+        # by coordinate name, then by dimensions, in ascending order.
         def key_func(coord):
             return (
                 axes.get(guess_coord_axis(coord), len(axes) + 1),
-                coord._as_defn(),
+                coord.name(),
                 cube.coord_dims(coord),
             )
 
@@ -423,7 +422,7 @@ class _CubeSignature:
                 self.scalar_coords.append(coord)
 
         def meta_key_func(dm):
-            return (dm._as_defn(), dm.cube_dims(cube))
+            return (dm.metadata, dm.cube_dims(cube))
 
         for cm in sorted(cube.cell_measures(), key=meta_key_func):
             dims = cube.cell_measure_dims(cm)
@@ -991,6 +990,9 @@ class _ProtoCube:
                             points, bounds=bnds, **kwargs
                         )
                     except ValueError:
+                        # Ensure to remove the "circular" kwarg, which may be
+                        # present in the defn of a DimCoord being demoted.
+                        _ = kwargs.pop("circular", None)
                         coord = iris.coords.AuxCoord(
                             points, bounds=bnds, **kwargs
                         )

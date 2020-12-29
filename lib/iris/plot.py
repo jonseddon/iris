@@ -168,7 +168,7 @@ def _get_plot_defn(cube, mode, ndims=2):
                 if isinstance(coord, iris.coords.DimCoord)
             ]
             if aux_coords:
-                aux_coords.sort(key=lambda coord: coord._as_defn())
+                aux_coords.sort(key=lambda coord: coord.metadata)
                 coords[dim] = aux_coords[0]
 
     # If plotting a 2 dimensional plot, check for 2d coordinates
@@ -183,7 +183,7 @@ def _get_plot_defn(cube, mode, ndims=2):
                 coord for coord in two_dim_coords if coord.ndim == 2
             ]
             if len(two_dim_coords) >= 2:
-                two_dim_coords.sort(key=lambda coord: coord._as_defn())
+                two_dim_coords.sort(key=lambda coord: coord.metadata)
                 coords = two_dim_coords[:2]
 
     if mode == iris.coords.POINT_MODE:
@@ -249,7 +249,17 @@ def _string_coord_axis_tick_labels(string_axes, axes=None):
 
     ax = axes if axes else plt.gca()
     for axis, ticks in string_axes.items():
-        formatter = mpl_ticker.IndexFormatter(ticks)
+        # Define a tick formatter. This will assign a label to all ticks
+        # located precisely on  an integer in range(len(ticks)) and assign
+        # an empty string to any other ticks.
+        def ticker_func(tick_location, _):
+            tick_locations = range(len(ticks))
+            labels = ticks
+            label_dict = dict(zip(tick_locations, labels))
+            label = label_dict.get(tick_location, "")
+            return label
+
+        formatter = mpl_ticker.FuncFormatter(ticker_func)
         locator = mpl_ticker.MaxNLocator(integer=True)
         this_axis = getattr(ax, axis)
         this_axis.set_major_formatter(formatter)
@@ -341,7 +351,7 @@ def _check_bounds_contiguity_and_mask(coord, data, atol=None, rtol=None):
             )
 
             not_masked_at_discontiguity_along_y = np.any(
-                np.logical_and(mask_invert[:-1,], diffs_along_y)
+                np.logical_and(mask_invert[:-1], diffs_along_y)
             )
 
             not_masked_at_discontiguity = (
@@ -441,6 +451,11 @@ def _draw_2d_from_bounds(draw_method_name, cube, *args, **kwargs):
                     values = np.arange(data.shape[data_dim] + 1) - 0.5
                 else:
                     values = coord.contiguous_bounds()
+                    values = _fixup_dates(coord, values)
+                    if values.dtype == np.dtype(object) and isinstance(
+                        values[0], datetime.datetime
+                    ):
+                        values = mpl_dates.date2num(values)
 
             plot_arrays.append(values)
 
@@ -650,7 +665,20 @@ def _get_plot_objects(args):
         # single argument
         v_object = args[0]
         u_object = _u_object_from_v_object(v_object)
+
         u, v = _uv_from_u_object_v_object(u_object, args[0])
+
+        # If a single cube argument, and the associated dimension coordinate
+        # is vertical-like, put the coordinate on the y axis, and the data o
+        # the x.
+        if (
+            isinstance(v_object, iris.cube.Cube)
+            and isinstance(u_object, iris.coords.Coord)
+            and iris.util.guess_coord_axis(u_object) in ["Y", "Z"]
+        ):
+            u_object, v_object = v_object, u_object
+            u, v = v, u
+
         args = args[1:]
     return u_object, v_object, u, v, args
 

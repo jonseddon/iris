@@ -15,8 +15,6 @@ import iris.tests as tests
 
 from unittest import mock
 
-import numpy as np
-
 import iris
 from iris.coord_systems import Mercator
 from iris.fileformats._pyke_rules.compiled_krb.fc_rules_cf_fc import \
@@ -53,6 +51,20 @@ class TestBuildMercatorCoordinateSystem(tests.IrisTest):
         expected = Mercator(
             longitude_of_projection_origin=(
                 cf_grid_var.longitude_of_projection_origin),
+            ellipsoid=iris.coord_systems.GeogCS(
+                cf_grid_var.semi_major_axis,
+                inverse_flattening=cf_grid_var.inverse_flattening))
+        self.assertEqual(cs, expected)
+
+    def test_longitude_missing(self):
+        cf_grid_var = mock.Mock(
+            spec=[],
+            semi_major_axis=6377563.396,
+            inverse_flattening=299.3249646)
+
+        cs = build_mercator_coordinate_system(None, cf_grid_var)
+
+        expected = Mercator(
             ellipsoid=iris.coord_systems.GeogCS(
                 cf_grid_var.semi_major_axis,
                 inverse_flattening=cf_grid_var.inverse_flattening))

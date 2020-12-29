@@ -21,6 +21,7 @@ graphical test results.
 
 import codecs
 import collections
+from collections.abc import Mapping
 import contextlib
 import datetime
 import difflib
@@ -58,8 +59,10 @@ import iris.util
 try:
     import matplotlib
 
-    matplotlib.use("agg")
+    # Override any user settings e.g. from matplotlibrc file.
     matplotlib.rcdefaults()
+    # Set backend *after* rcdefaults, as we don't want that overridden (#3846).
+    matplotlib.use("agg")
     # Standardise the figure size across matplotlib versions.
     # This permits matplotlib png image comparison.
     matplotlib.rcParams["figure.figsize"] = [8.0, 6.0]
@@ -75,13 +78,6 @@ except ImportError:
     GDAL_AVAILABLE = False
 else:
     GDAL_AVAILABLE = True
-
-try:
-    from iris_grib.message import GribMessage
-
-    GRIB_AVAILABLE = True
-except ImportError:
-    GRIB_AVAILABLE = False
 
 try:
     import iris_sample_data  # noqa
@@ -799,7 +795,7 @@ class IrisTest_nometa(unittest.TestCase):
             bits[0] = os.path.splitext(file_name)[0]
             folder, location = os.path.split(path)
             bits = [location] + bits
-            while location not in ["iris", "example_tests"]:
+            while location not in ["iris", "gallery_tests"]:
                 folder, location = os.path.split(folder)
                 bits = [location] + bits
         test_id = ".".join(bits)
@@ -1011,6 +1007,85 @@ class IrisTest_nometa(unittest.TestCase):
         self.assertArrayAllClose(result.data.mean(), mean, rtol=rtol)
         self.assertArrayAllClose(result.data.std(), std_dev, rtol=rtol)
 
+    def assertDictEqual(self, lhs, rhs, msg=None):
+        """
+        This method overrides unittest.TestCase.assertDictEqual (new in Python3.1)
+        in order to cope with dictionary comparison where the value of a key may
+        be a numpy array.
+
+        """
+        if not isinstance(lhs, Mapping):
+            emsg = (
+                f"Provided LHS argument is not a 'Mapping', got {type(lhs)}."
+            )
+            self.fail(emsg)
+
+        if not isinstance(rhs, Mapping):
+            emsg = (
+                f"Provided RHS argument is not a 'Mapping', got {type(rhs)}."
+            )
+            self.fail(emsg)
+
+        if set(lhs.keys()) != set(rhs.keys()):
+            emsg = f"{lhs!r} != {rhs!r}."
+            self.fail(emsg)
+
+        for key in lhs.keys():
+            lvalue, rvalue = lhs[key], rhs[key]
+
+            if ma.isMaskedArray(lvalue) or ma.isMaskedArray(rvalue):
+                if not ma.isMaskedArray(lvalue):
+                    emsg = (
+                        f"Dictionary key {key!r} values are not equal, "
+                        f"the LHS value has type {type(lvalue)} and "
+                        f"the RHS value has type {ma.core.MaskedArray}."
+                    )
+                    raise AssertionError(emsg)
+
+                if not ma.isMaskedArray(rvalue):
+                    emsg = (
+                        f"Dictionary key {key!r} values are not equal, "
+                        f"the LHS value has type {ma.core.MaskedArray} and "
+                        f"the RHS value has type {type(lvalue)}."
+                    )
+                    raise AssertionError(emsg)
+
+                self.assertMaskedArrayEqual(lvalue, rvalue)
+            elif isinstance(lvalue, np.ndarray) or isinstance(
+                rvalue, np.ndarray
+            ):
+                if not isinstance(lvalue, np.ndarray):
+                    emsg = (
+                        f"Dictionary key {key!r} values are not equal, "
+                        f"the LHS value has type {type(lvalue)} and "
+                        f"the RHS value has type {np.ndarray}."
+                    )
+                    raise AssertionError(emsg)
+
+                if not isinstance(rvalue, np.ndarray):
+                    emsg = (
+                        f"Dictionary key {key!r} values are not equal, "
+                        f"the LHS value has type {np.ndarray} and "
+                        f"the RHS value has type {type(rvalue)}."
+                    )
+                    raise AssertionError(emsg)
+
+                self.assertArrayEqual(lvalue, rvalue)
+            else:
+                if lvalue != rvalue:
+                    emsg = (
+                        f"Dictionary key {key!r} values are not equal, "
+                        f"{lvalue!r} != {rvalue!r}."
+                    )
+                    raise AssertionError(emsg)
+
+    def assertEqualAndKind(self, value, expected):
+        # Check a value, and also its type 'kind' = float/integer/string.
+        self.assertEqual(value, expected)
+        self.assertEqual(
+            np.array(value).dtype.kind, np.array(expected).dtype.kind
+        )
+
 
 # An environment variable controls whether test timings are output.
 #
@@ -1179,12 +1254,6 @@ def skip_plot(fn):
     )
 
     return skip(fn)
-
-
-skip_grib = unittest.skipIf(
-    not GRIB_AVAILABLE,
-    'Test(s) require "iris-grib" package, ' "which is not available.",
-)
 
 
 skip_sample_data = unittest.skipIf(

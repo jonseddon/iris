@@ -235,7 +235,11 @@ class TestBasicMaths(tests.IrisTest):
         b.attributes["my attribute"] = "foobar"
         c = a + b
         self.assertIsNone(c.standard_name)
-        self.assertEqual(c.attributes, {})
+        expected = {
+            "my attribute": "foobar",
+            "source": "Data from Met Office Unified Model",
+        }
+        self.assertEqual(expected, c.attributes)
 
     def test_apply_ufunc(self):
         a = self.cube
@@ -344,10 +348,13 @@ class TestBasicMaths(tests.IrisTest):
 
         my_ifunc = iris.analysis.maths.IFunc(np.square, lambda a: a.units ** 2)
 
-        # should fail because giving 2 arguments to an ifunc that expects
-        # only one
-        with self.assertRaises(ValueError):
-            my_ifunc(a, a)
+        # should now NOT fail because giving 2 arguments to an ifunc that
+        # expects only one will now ignore the surplus argument and raise
+        # a logging message instead, and go on to perform the operation.
+        emsg = "ValueError not raised"
+        with self.assertRaisesRegex(AssertionError, emsg):
+            with self.assertRaises(ValueError):
+                my_ifunc(a, a)
 
         my_ifunc = iris.analysis.maths.IFunc(
             np.multiply, lambda a: cf_units.Unit("1")
@@ -509,7 +516,11 @@ class TestDivideAndMultiply(tests.IrisTest):
         b.attributes["my attribute"] = "foobar"
         c = a * b
         self.assertIsNone(c.standard_name)
-        self.assertEqual(c.attributes, {})
+        expected = {
+            "source": "Data from Met Office Unified Model",
+            "my attribute": "foobar",
+        }
+        self.assertEqual(expected, c.attributes)
 
     def test_multiplication_in_place(self):
         a = self.cube.copy()
@@ -526,11 +537,12 @@ class TestDivideAndMultiply(tests.IrisTest):
 class TestExponentiate(tests.IrisTest):
     def setUp(self):
         self.cube = iris.tests.stock.global_pp()
-        self.cube.data = self.cube.data - 260
+        # Increase dtype from float32 to float64 in order
+        # to avoid dtype quantization errors during maths.
+        self.cube.data = self.cube.data.astype(np.float64) - 260.0
 
     def test_exponentiate(self):
         a = self.cube
-        a.data = a.data.astype(np.float64)
         e = pow(a, 4)
         self.assertCMLApproxData(e, ("analysis", "exponentiate.cml"))
 
@@ -542,8 +554,8 @@ class TestExponentiate(tests.IrisTest):
 
         e = a ** 0.5
 
-        self.assertCML(e, ("analysis", "sqrt.cml"))
         self.assertArrayEqual(e.data, a.data ** 0.5)
+        self.assertCML(e, ("analysis", "sqrt.cml"))
         self.assertRaises(ValueError, iris.analysis.maths.exponentiate, a, 0.3)
 
     def test_type_error(self):

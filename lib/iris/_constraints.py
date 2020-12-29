@@ -131,7 +131,7 @@ class Constraint:
         if self._name:
             # Require to also check against cube.name() for the fallback
             # "unknown" default case, when there is no name metadata available.
-            match = self._name in cube.names or self._name == cube.name()
+            match = self._name in cube._names or self._name == cube.name()
         if match and self._cube_func:
             match = self._cube_func(cube)
         return match
@@ -515,6 +515,7 @@ class NameConstraint(Constraint):
         match.
 
         Kwargs:
+
         * standard_name:
             A string or callable representing the standard name to match
             against.
@@ -534,6 +535,7 @@ class NameConstraint(Constraint):
             where the standard_name is not set, then use standard_name=None.
 
         Returns:
+
         * Boolean
 
         Example usage::
@@ -544,8 +546,8 @@ class NameConstraint(Constraint):
 
             iris.NameConstraint(standard_name='air_temperature',
                                 STASH=lambda stash: stash.item == 203)
-
         """
+
         self.standard_name = standard_name
         self.long_name = long_name
         self.var_name = var_name

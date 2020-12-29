@@ -276,7 +276,7 @@ class Test_xml(tests.IrisTest):
     def test_cell_measures(self):
         cube = stock.simple_3d_w_multidim_coords()
         cm_a = iris.coords.CellMeasure(
-            np.zeros(cube.shape[-2:]), measure="area"
+            np.zeros(cube.shape[-2:]), measure="area", units="1"
         )
         cube.add_cell_measure(cm_a, (1, 2))
         cm_v = iris.coords.CellMeasure(
@@ -1077,7 +1077,10 @@ def create_cube(lon_min, lon_max, bounds=False):
         0,
     )
     cube.add_aux_coord(
-        iris.coords.AuxCoord([1.0, 0.9, 0.8, 0.6], long_name="sigma"), 0
+        iris.coords.AuxCoord(
+            [1.0, 0.9, 0.8, 0.6], long_name="sigma", units="1"
+        ),
+        0,
     )
     cube.add_dim_coord(
         iris.coords.DimCoord([-45, 0, 45], "latitude", units="degrees"), 1
@@ -2001,7 +2004,7 @@ class Test_remove_metadata(tests.IrisTest):
             np.arange(6).reshape(2, 3), long_name="area"
         )
         self.b_cell_measure = CellMeasure(
-            np.arange(6).reshape(2, 3), long_name="other_area",
+            np.arange(6).reshape(2, 3), long_name="other_area"
         )
         cube.add_cell_measure(a_cell_measure, [0, 1])
         cube.add_cell_measure(self.b_cell_measure, [0, 1])
@@ -2040,6 +2043,14 @@ class Test_remove_metadata(tests.IrisTest):
             self.cube.ancillary_variable("Quality of Detection")
         )
         self.assertEqual(self.cube._ancillary_variables_and_dims, [])
+
+    def test_remove_ancilliary_variable_by_name(self):
+        self.cube.remove_ancillary_variable("Quality of Detection")
+        self.assertEqual(self.cube._ancillary_variables_and_dims, [])
+
+    def test_fail_remove_ancilliary_variable_by_name(self):
+        with self.assertRaises(AncillaryVariableNotFoundError):
+            self.cube.remove_ancillary_variable("notname")
 
 
 class Test__getitem_CellMeasure(tests.IrisTest):
@@ -2143,6 +2154,16 @@ class TestAncillaryVariables(tests.IrisTest):
         with self.assertRaises(AncillaryVariableNotFoundError):
             self.cube.ancillary_variable_dims(ancillary_variable)
 
+    def test_ancillary_variable_dims_by_name(self):
+        ancill_var_dims = self.cube.ancillary_variable_dims(
+            "number_of_observations"
+        )
+        self.assertEqual(ancill_var_dims, (0, 1))
+
+    def test_fail_ancillary_variable_dims_by_name(self):
+        with self.assertRaises(AncillaryVariableNotFoundError):
+            self.cube.ancillary_variable_dims("notname")
+
 
 class TestCellMeasures(tests.IrisTest):
     def setUp(self):
@@ -2152,7 +2173,7 @@ class TestCellMeasures(tests.IrisTest):
         z_coord = AuxCoord(points=np.arange(6).reshape(2, 3), long_name="z")
         cube.add_aux_coord(z_coord, [0, 1])
         self.a_cell_measure = CellMeasure(
-            np.arange(6).reshape(2, 3), long_name="area", units="m2",
+            np.arange(6).reshape(2, 3), long_name="area", units="m2"
         )
         cube.add_cell_measure(self.a_cell_measure, [0, 1])
         self.cube = cube
@@ -2190,6 +2211,14 @@ class TestCellMeasures(tests.IrisTest):
         a_cell_measure.units = "km2"
         with self.assertRaises(CellMeasureNotFoundError):
             _ = self.cube.cell_measure_dims(a_cell_measure)
+
+    def test_cell_measure_dims_by_name(self):
+        cm_dims = self.cube.cell_measure_dims("area")
+        self.assertEqual(cm_dims, (0, 1))
+
+    def test_fail_cell_measure_dims_by_name(self):
+        with self.assertRaises(CellMeasureNotFoundError):
+            self.cube.cell_measure_dims("notname")
 
 
 class Test_transpose(tests.IrisTest):
@@ -2254,7 +2283,7 @@ class Test_transpose(tests.IrisTest):
 
     def test_cell_measures(self):
         area_cm = CellMeasure(
-            np.arange(12).reshape(3, 4), long_name="area of cells",
+            np.arange(12).reshape(3, 4), long_name="area of cells"
         )
         self.cube.add_cell_measure(area_cm, (0, 2))
         self.cube.transpose()

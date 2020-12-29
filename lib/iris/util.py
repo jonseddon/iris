@@ -24,6 +24,7 @@ import numpy as np
 import numpy.ma as ma
 
 import iris
+from iris._deprecation import warn_deprecated
 import iris.coords
 import iris.exceptions
 import iris.cube
@@ -1061,7 +1062,7 @@ def clip_string(the_str, clip_length=70, rider="..."):
 
     Returns:
         The string clipped to the required length with a rider appended.
-        If the clip length was greater than the orignal string, the
+        If the clip length was greater than the original string, the
         original string is returned unaltered.
 
     """
@@ -1218,9 +1219,15 @@ def as_compatible_shape(src_cube, target_cube):
     dimension coordinates where necessary. It operates by matching coordinate
     metadata to infer the dimensions that need modifying, so the provided
     cubes must have coordinates with the same metadata
-    (see :class:`iris.coords.CoordDefn`).
+    (see :class:`iris.common.CoordMetadata`).
 
     .. note:: This function will load and copy the data payload of `src_cube`.
+
+    .. deprecated:: 3.0.0
+
+       Instead use :class:`~iris.common.resolve.Resolve`. For example, rather
+       than calling ``as_compatible_shape(src_cube, target_cube)`` replace
+       with ``Resolve(src_cube, target_cube)(target_cube.core_data())``.
 
     Args:
 
@@ -1236,6 +1243,12 @@ def as_compatible_shape(src_cube, target_cube):
         suitably reshaped to fit.
 
     """
+    wmsg = (
+        "iris.util.as_compatible_shape has been deprecated and will be "
+        "removed, please use iris.common.resolve.Resolve instead."
+    )
+    warn_deprecated(wmsg)
+
     dim_mapping = {}
     for coord in target_cube.aux_coords + target_cube.dim_coords:
         dims = target_cube.coord_dims(coord)

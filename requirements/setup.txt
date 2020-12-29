@@ -1,5 +1,4 @@
 # Dependencies necessary to run setup.py of iris
 # ----------------------------------------------
 
-setuptools
-# pyke (not pip installable)  #conda: pyke
+setuptools>=40.8.0

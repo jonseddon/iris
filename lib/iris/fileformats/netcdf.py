@@ -8,8 +8,7 @@ Module to support the loading of a NetCDF file into an Iris cube.
 
 See also: `netCDF4 python <http://code.google.com/p/netcdf4-python/>`_.
 
-Also refer to document 'NetCDF Climate and Forecast (CF) Metadata Conventions',
-Version 1.4, 27 February 2009.
+Also refer to document 'NetCDF Climate and Forecast (CF) Metadata Conventions'.
 
 """
 
@@ -22,6 +21,7 @@ import string
 import warnings
 
 import dask.array as da
+import cf_units
 import netCDF4
 import numpy as np
 import numpy.ma as ma
@@ -459,7 +459,10 @@ class NetCDFDataProxy:
 
 def _assert_case_specific_facts(engine, cf, cf_group):
     # Initialise pyke engine "provides" hooks.
-    engine.provides["coordinates"] = []
+    # These are used to patch non-processed element attributes after rules activation.
+    engine.cube_parts["coordinates"] = []
+    engine.cube_parts["cell_measures"] = []
+    engine.cube_parts["ancillary_variables"] = []
 
     # Assert facts for CF coordinates.
     for cf_name in cf_group.coordinates.keys():
@@ -477,6 +480,12 @@ def _assert_case_specific_facts(engine, cf, cf_group):
     for cf_name in cf_group.cell_measures.keys():
         engine.add_case_specific_fact(
             _PYKE_FACT_BASE, "cell_measure", (cf_name,)
+        )
+
+    # Assert facts for CF ancillary variables.
+    for cf_name in cf_group.ancillary_variables.keys():
+        engine.add_case_specific_fact(
+            _PYKE_FACT_BASE, "ancillary_variable", (cf_name,)
         )
 
     # Assert facts for CF grid_mappings.
@@ -586,7 +595,7 @@ def _load_cube(engine, cf, cf_var, filename):
     # Initialise pyke engine rule processing hooks.
     engine.cf_var = cf_var
     engine.cube = cube
-    engine.provides = {}
+    engine.cube_parts = {}
     engine.requires = {}
     engine.rule_triggered = set()
     engine.filename = filename
@@ -597,31 +606,38 @@ def _load_cube(engine, cf, cf_var, filename):
     # Run pyke inference engine with forward chaining rules.
     engine.activate(_PYKE_RULE_BASE)
 
-    # Populate coordinate attributes with the untouched attributes from the
-    # associated CF-netCDF variable.
-    coordinates = engine.provides.get("coordinates", [])
-
+    # Having run the rules, now populate the attributes of all the cf elements with the
+    # "unused" attributes from the associated CF-netCDF variable.
+    # That is, all those that aren't CF reserved terms.
     def attribute_predicate(item):
         return item[0] not in _CF_ATTRS
 
-    for coord, cf_var_name in coordinates:
-        tmpvar = filter(
-            attribute_predicate, cf.cf_group[cf_var_name].cf_attrs_unused()
-        )
+    def add_unused_attributes(iris_object, cf_var):
+        tmpvar = filter(attribute_predicate, cf_var.cf_attrs_unused())
         for attr_name, attr_value in tmpvar:
-            _set_attributes(coord.attributes, attr_name, attr_value)
+            _set_attributes(iris_object.attributes, attr_name, attr_value)
 
-    tmpvar = filter(attribute_predicate, cf_var.cf_attrs_unused())
-    # Attach untouched attributes of the associated CF-netCDF data variable to
-    # the cube.
-    for attr_name, attr_value in tmpvar:
-        _set_attributes(cube.attributes, attr_name, attr_value)
+    def fix_attributes_all_elements(role_name):
+        elements_and_names = engine.cube_parts.get(role_name, [])
 
+        for iris_object, cf_var_name in elements_and_names:
+            add_unused_attributes(iris_object, cf.cf_group[cf_var_name])
+
+    # Populate the attributes of all coordinates, cell-measures and ancillary-vars.
+    fix_attributes_all_elements("coordinates")
+    fix_attributes_all_elements("ancillary_variables")
+    fix_attributes_all_elements("cell_measures")
+
+    # Also populate attributes of the top-level cube itself.
+    add_unused_attributes(cube, cf_var)
+
+    # Work out reference names for all the coords.
     names = {
         coord.var_name: coord.standard_name or coord.var_name or "unknown"
         for coord in cube.coords()
     }
 
+    # Add all the cube cell methods.
     cube.cell_methods = [
         iris.coords.CellMethod(
             method=method.method,
@@ -661,7 +677,7 @@ def _load_aux_factory(engine, cube):
             # Convert term names to coordinates (via netCDF variable names).
             name = engine.requires["formula_terms"].get(term, None)
             if name is not None:
-                for coord, cf_var_name in engine.provides["coordinates"]:
+                for coord, cf_var_name in engine.cube_parts["coordinates"]:
                     if cf_var_name == name:
                         return coord
                 warnings.warn(
@@ -959,7 +975,7 @@ class Saver:
             than global attributes.
 
         * unlimited_dimensions (iterable of strings and/or
-          :class:`iris.coords.Coord` objects):
+           :class:`iris.coords.Coord` objects):
             List of coordinate names (or coordinate objects)
             corresponding to coordinate dimensions of `cube` to save with the
             NetCDF dimension variable length 'UNLIMITED'. By default, no
@@ -992,10 +1008,10 @@ class Saver:
             Used to manually specify the HDF5 chunksizes for each dimension of
             the variable. A detailed discussion of HDF chunking and I/O
             performance is available here:
-            http://www.hdfgroup.org/HDF5/doc/H5.user/Chunking.html. Basically,
-            you want the chunk size for each dimension to match as closely as
-            possible the size of the data block that users will read from the
-            file. `chunksizes` cannot be set if `contiguous=True`.
+            https://www.unidata.ucar.edu/software/netcdf/documentation/NUG/netcdf_perf_chunking.html.
+            Basically, you want the chunk size for each dimension to match
+            as closely as possible the size of the data block that users will
+            read from the file. `chunksizes` cannot be set if `contiguous=True`.
 
         * endian (string):
             Used to control whether the data is stored in little or big endian
@@ -1049,7 +1065,7 @@ class Saver:
             `chunksizes` and `endian` keywords are silently ignored for netCDF
             3 files that do not use HDF5.
 
-            """
+        """
         if unlimited_dimensions is None:
             unlimited_dimensions = []
 
@@ -1760,7 +1776,7 @@ class Saver:
         # Add the data to the CF-netCDF variable.
         cf_var[:] = data
 
-        if dimensional_metadata.units != "unknown":
+        if dimensional_metadata.units.is_udunits():
             _setncattr(cf_var, "units", str(dimensional_metadata.units))
 
         if dimensional_metadata.standard_name is not None:
@@ -1926,7 +1942,7 @@ class Saver:
         # Deal with CF-netCDF units and standard name.
         standard_name, long_name, units = self._cf_coord_identity(coord)
 
-        if units != "unknown":
+        if cf_units.as_unit(units).is_udunits():
             _setncattr(cf_var, "units", units)
 
         if standard_name is not None:
@@ -2371,7 +2387,7 @@ class Saver:
         if cube.long_name:
             _setncattr(cf_var, "long_name", cube.long_name)
 
-        if cube.units != "unknown":
+        if cube.units.is_udunits():
             _setncattr(cf_var, "units", str(cube.units))
 
         # Add the CF-netCDF calendar attribute.
@@ -2473,7 +2489,7 @@ def save(
     """
     Save cube(s) to a netCDF file, given the cube and the filename.
 
-    * Iris will write CF 1.5 compliant NetCDF files.
+    * Iris will write CF 1.7 compliant NetCDF files.
     * The attributes dictionaries on each cube in the saved cube list
       will be compared and common attributes saved as NetCDF global
       attributes where appropriate.
@@ -2506,7 +2522,7 @@ def save(
         than global attributes.
 
     * unlimited_dimensions (iterable of strings and/or
-      :class:`iris.coords.Coord` objects):
+       :class:`iris.coords.Coord` objects):
         List of coordinate names (or coordinate objects) corresponding
         to coordinate dimensions of `cube` to save with the NetCDF dimension
         variable length 'UNLIMITED'. By default, no unlimited dimensions are
@@ -2538,7 +2554,7 @@ def save(
     * chunksizes (tuple of int):
         Used to manually specify the HDF5 chunksizes for each dimension of the
         variable. A detailed discussion of HDF chunking and I/O performance is
-        available here: http://www.hdfgroup.org/HDF5/doc/H5.user/Chunking.html.
+        available here: https://www.unidata.ucar.edu/software/netcdf/documentation/NUG/netcdf_perf_chunking.html.
         Basically, you want the chunk size for each dimension to match as
         closely as possible the size of the data block that users will read
         from the file. `chunksizes` cannot be set if `contiguous=True`.

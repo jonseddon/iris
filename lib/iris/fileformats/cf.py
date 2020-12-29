@@ -9,8 +9,8 @@ according to the 'NetCDF Climate and Forecast (CF) Metadata Conventions'.
 
 References:
 
-[CF]  NetCDF Climate and Forecast (CF) Metadata conventions, Version 1.5, October, 2010.
-[NUG] NetCDF User's Guide, http://www.unidata.ucar.edu/software/netcdf/docs/netcdf.html
+[CF]  NetCDF Climate and Forecast (CF) Metadata conventions.
+[NUG] NetCDF User's Guide, https://www.unidata.ucar.edu/software/netcdf/documentation/NUG/
 
 """
 
@@ -45,7 +45,7 @@ _CF_PARSE = re.compile(
 # NetCDF variable attributes handled by the netCDF4 module and
 # therefore automatically classed as "used" attributes.
 _CF_ATTRS_IGNORE = set(
-    ["_FillValue", "add_offset", "missing_value", "scale_factor",]
+    ["_FillValue", "add_offset", "missing_value", "scale_factor"]
 )
 
 #: Supported dimensionless vertical coordinate reference surface/phemomenon
