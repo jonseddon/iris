@@ -21,6 +21,9 @@ This document explains the changes made to Iris for this release
   the primary coordinate being plotted against is a vertical coordinate. E.g.
   ``iris.plot.plot(z_cube)`` will produce a z-vs-phenomenon plot, where before
   it would have produced a phenomenon-vs-z plot. (:pull:`3906`)
+* `@jonseddon`_ added :meth:`~iris.plot.barbs` to provide a convenient way to
+  use :func:`matplotlib.pyplot.barbs` with Iris cubes. A gallery example was
+  included to illustrate the new method's use. (:pull:`3710`)
 
 
 🐛 Bugs Fixed
@@ -66,3 +69,4 @@ This document explains the changes made to Iris for this release
 .. _@trexfeathers: https://github.com/trexfeathers
 .. _@gcaria: https://github.com/gcaria
 .. _@rcomer: https://github.com/rcomer
+.. _@jonseddon: https://github.com/jonseddon
